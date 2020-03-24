@@ -145,7 +145,7 @@ for query_name in xsl.sheet_names:
 
     Y = np.append(Y, np.c_[y, np.repeat(index, SAMPLES_PER_DOC)], axis=0)
     # Concatenate x
-    X = np.append(X, np.dot(document_vectorizer_array, y), axis=0)
+    X = np.append(X, document_vectorizer_array, axis=0)
 
     index += 1
 
@@ -154,7 +154,8 @@ rank_svm = RankSVM().fit(X, Y)
 search_query = ""
 while search_query != "exit":
 
-    search_query = input("Enter the search keywords: (enter exit for quit)")
+    search_query = input("Enter the search keywords: (enter exit for quit) ")
+    print()
 
     if (search_query == "exit"):
         break
