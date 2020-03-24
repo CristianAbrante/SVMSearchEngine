@@ -1,0 +1,19 @@
+[{
+    "id": 0,
+    "query": "blood glucose",
+    "returnedIds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "clickedIds": [5, 6, 9, 12, 15, 17]
+},
+{
+    "id": 1,
+    "query": "plasma bilirubin",
+    "returnedIds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "clickedIds": [2, 5, 7, 9, 10, 15, 20]
+},
+{
+    "id": 2,
+    "query": "white blood cells count",
+    "returnedIds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "clickedIds": [1, 10, 14, 18]
+}
+]
