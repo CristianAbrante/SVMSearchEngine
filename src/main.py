@@ -7,6 +7,7 @@ import numpy as np
 
 from sklearn import svm, linear_model
 from sklearn.model_selection import train_test_split
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def transform_pairwise(X, y):
@@ -97,11 +98,6 @@ class RankSVM(svm.LinearSVC):
         Because we transformed into a pairwise problem, chance level is at 0.5
         """
         X_trans, y_trans = transform_pairwise(X, y)
-
-        print("first")
-        print(super(RankSVM, self).predict(X_trans))
-        print("second")
-        print(y_trans)
         return np.mean(super(RankSVM, self).predict(X_trans) == y_trans)
 
 
@@ -113,22 +109,22 @@ sheet_and_df = {}
 NUMBER_OF_FEATURES = 43
 SAMPLES_PER_DOC = 20
 
+
 X = np.empty((0, NUMBER_OF_FEATURES), float)
 Y = np.empty((0, 2), float)
 index = 0.0
 
+full_docs = []
+
 for query_name in xsl.sheet_names:
     documents = xsl.parse(query_name)['long_common_name']
+    full_docs = documents
 
     document_vectorizer = TfidfVectorizer(stop_words="english", use_idf=True)
     document_vectorizer_result = document_vectorizer.fit_transform(documents)
 
     document_vectorizer_df = pd.DataFrame(
         document_vectorizer_result.toarray(), columns=document_vectorizer.get_feature_names())
-    document_vectorizer_array = document_vectorizer_df.to_numpy()
-
-    # Concatenate x
-    X = np.append(X, document_vectorizer_array, axis=0)
 
     query_vectorizer = TfidfVectorizer(stop_words="english", use_idf=True)
     query_vectorizer_result = query_vectorizer.fit_transform([query_name])
@@ -137,71 +133,62 @@ for query_name in xsl.sheet_names:
         query_vectorizer_result.toarray(), columns=query_vectorizer.get_feature_names())
     query_vectorizer_array = query_vectorizer_df.to_numpy()
 
+    document_vectorizer_array = document_vectorizer_df.to_numpy()
+
     intersection = np.intersect1d(
         document_vectorizer.get_feature_names(), query_vectorizer.get_feature_names())
 
+    # Concatenate y
     y = np.full((SAMPLES_PER_DOC), 0.0)
-    # print(y)
-    # print(document_vectorizer_df["blood"].to_numpy())
     for keyword in intersection:
         y = np.add(y, document_vectorizer_df[keyword].to_numpy())
-        # print(y)
 
-    # print(y)
-    # print(np.c_[y, np.repeat(index, SAMPLES_PER_DOC)])
     Y = np.append(Y, np.c_[y, np.repeat(index, SAMPLES_PER_DOC)], axis=0)
+    # Concatenate x
+    X = np.append(X, np.dot(document_vectorizer_array, y), axis=0)
 
     index += 1
-    #     # # Used for calculate Y
-    #     # np.random.seed(100)
-    # query_vectorizer = TfidfVectorizer(stop_words="english", use_idf=True)
-    # query_vec_result = query_vectorizer.fit_transform([query_name])
 
-    # intersection = np.intersect1d(
-    #     query_vectorizer.get_feature_names(), vectorizer.get_feature_names())
+rank_svm = RankSVM().fit(X, Y)
 
-    # y = np.empty((20, 2), float)
-    # for keyword in intersection:
-    #     print(x_vec[keyword].to_numpy())
-    #     y = np.sum(y, x_vec[keyword].to_numpy())
+search_query = ""
+while search_query != "exit":
 
-    # print(y)
+    search_query = input("Enter the search keywords: (enter exit for quit)")
 
-    # print(query_vec_result.shape)
-    # print(np.intersect1d(query_vectorizer.get_feature_names(),
-    #                      vectorizer.get_feature_names()))
+    if (search_query == "exit"):
+        break
 
-    # n_samples, n_features = 21, 43
-    # true_coef = np.random.randn(n_features)
-    # noise = np.random.randn(n_samples) / np.linalg.norm(true_coef)
-    # y = np.dot(x_vec, true_coef)
+    X = np.empty((0, NUMBER_OF_FEATURES), float)
+    Y = np.empty((0, 2), float)
 
-    # # concatenate Y
-    # Y = np.concatenate(
-    #     (Y, np.c_[y, np.repeat(index, n_samples)]), axis=0)
+    document_vectorizer = TfidfVectorizer(stop_words="english", use_idf=True)
+    document_vectorizer_result = document_vectorizer.fit_transform(full_docs)
 
-    # index += 1.0
+    document_vectorizer_df = pd.DataFrame(
+        document_vectorizer_result.toarray(), columns=document_vectorizer.get_feature_names())
 
-print(X)
-print(X.shape)
-print(Y)
-print(Y.shape)
+    query_vectorizer = TfidfVectorizer(stop_words="english", use_idf=True)
+    query_vectorizer_result = query_vectorizer.fit_transform([search_query])
 
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y)
+    query_vectorizer_df = pd.DataFrame(
+        query_vectorizer_result.toarray(), columns=query_vectorizer.get_feature_names())
+    query_vectorizer_array = query_vectorizer_df.to_numpy()
 
-print(X_train.shape)
-print(Y_train)
-print(X_test.shape)
-print(Y_test)
+    # Concatenate x
+    X = np.append(X, document_vectorizer_array, axis=0)
 
-rank_svm = RankSVM().fit(X_train, Y_train)
+    intersection = np.intersect1d(
+        document_vectorizer.get_feature_names(), query_vectorizer.get_feature_names())
 
-rank_svm.score(X_test, Y_test)
-# print(rank_svm.coef_)
-print('Performance of ranking ', rank_svm.score(X_test, Y_test))
+    # Concatenate y
+    y = np.full((SAMPLES_PER_DOC), 0.0)
+    for keyword in intersection:
+        y = np.add(y, document_vectorizer_df[keyword].to_numpy())
 
-# Calculate tf-idf
-# vectorizer = TfidfVectorizer(stop_words="english", use_idf=False)
-# X = vectorizer.fit_transform(documents)
-# print(vectorizer.get_feature_names())
-# print(pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names()).to_numpy())
+    Y = np.append(Y, np.c_[y, np.repeat(index, SAMPLES_PER_DOC)], axis=0)
+
+    results = rank_svm.predict(X)
+
+    for result in results:
+        print(full_docs[result])
